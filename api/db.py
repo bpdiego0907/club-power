@@ -28,14 +28,14 @@ engine = create_engine(
 # Función para obtener los premios por DNI
 # -------------------------------------------------------------
 def fetch_premios_by_dni(dni: str):
-    """
-    Retorna los premios asociados a un DNI desde la tabla club_power_puntos.
-    """
     with engine.connect() as conn:
         row = conn.execute(text("""
-            SELECT dni,
-                   puntos_1er_premio AS canasta,
-                   puntos_2do_premio AS pavo
+            SELECT
+                dni,
+                puntos_1er_premio AS canasta,
+                puntos_2do_premio AS pavo,
+                COALESCE(puntos, 0) AS puntos,
+                COALESCE(pv, '')    AS pv
             FROM club_power_puntos
             WHERE dni = :dni
         """), {"dni": dni}).mappings().first()
