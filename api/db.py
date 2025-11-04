@@ -39,4 +39,10 @@ def fetch_premios_by_dni(dni: str):
             FROM club_power_puntos
             WHERE dni = :dni
         """), {"dni": dni}).mappings().first()
-        return row
+
+        if not row:
+            return None
+        out = dict(row)
+        out["puntos"] = float(out["puntos"]) if out["puntos"] is not None else 0.0
+        out["pv"] = out.get("pv") or ""
+        return out
