@@ -12,7 +12,7 @@ DB_URL = os.getenv("DB_URL")
 if not DB_URL:
     raise RuntimeError("DB_URL no está definido. Verifica tu archivo .env o las Variables en Railway.")
 
-# 🔹 Ajustar el driver para usar psycopg (no psycopg2)
+# Ajustar el driver para usar psycopg
 SQLA_URL = DB_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
 # Crear el motor de conexión
@@ -25,24 +25,44 @@ engine = create_engine(
 )
 
 # -------------------------------------------------------------
-# Función para obtener los premios por DNI
+# Función para obtener el avance CLUB POWER por DNI
 # -------------------------------------------------------------
-def fetch_premios_by_dni(dni: str):
+def fetch_avance_by_dni(dni: str):
     with engine.connect() as conn:
-        row = conn.execute(text("""
-            SELECT
-                dni,
-                puntos_1er_premio AS canasta,
-                puntos_2do_premio AS pavo,
-                COALESCE(puntos, 0) AS puntos,
-                COALESCE(pv, '')    AS pv
-            FROM club_power_puntos
-            WHERE dni = :dni
-        """), {"dni": dni}).mappings().first()
+        row = conn.execute(
+            text("""
+                SELECT
+                    dni,
+                    nombre,
+                    dia,
+
+                    pp_total,
+                    pp_vr,
+                    porta_pp,
+
+                    ss_total,
+                    ss_vr,
+                    opp,
+                    oss,
+
+                    updated_at
+                FROM club_power_avance
+                WHERE dni = :dni
+            """),
+            {"dni": dni}
+        ).mappings().first()
 
         if not row:
             return None
+
+        # Convertir a dict limpio
         out = dict(row)
-        out["puntos"] = float(out["puntos"]) if out["puntos"] is not None else 0.0
-        out["pv"] = out.get("pv") or ""
+
+        # Asegurar tipos (por seguridad)
+        for k in [
+            "pp_total", "pp_vr", "porta_pp",
+            "ss_total", "ss_vr", "opp", "oss"
+        ]:
+            out[k] = int(out.get(k) or 0)
+
         return out

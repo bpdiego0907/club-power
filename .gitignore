@@ -1,4 +1,36 @@
-﻿api/.venv/
-api/__pycache__/
+﻿# =========================
+# Entorno y credenciales
+# =========================
+.env
+.env.local
 api/.env
+.venv/
+api/.venv/
+
+# =========================
+# Python
+# =========================
+__pycache__/
+api/__pycache__/
 *.pyc
+
+# =========================
+# Archivos de datos / pruebas
+# =========================
+*.xlsx
+*.xls
+*.csv
+*.rar
+
+# =========================
+# Imágenes y binarios
+# =========================
+*.jpg
+*.jpeg
+*.png
+
+# =========================
+# Otros
+# =========================
+node_modules/
+
