@@ -10,23 +10,34 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
 
 TABLE_NAME = "club_power_avance"
 
+
 def normaliza_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     Normaliza columnas y valida el archivo de avance Club Power.
-    Formato esperado (nombres flexibles):
-      DNI, NOMBRE, DIA,
-      PP TOTAL, PP VR, PORTA PP,
-      SS TOTAL, SS VR, OPP, OSS
-    """
-    # 1) Normalizar nombres de columnas
-    df.columns = [c.strip().lower().replace("\n", " ") for c in df.columns]
 
-    # Mapa flexible de nombres (por si vienen con espacios o variaciones)
+    CSV esperado (ya estandarizado en tu caso):
+      dni, nombre, dia,
+      pp_total, pp_vr, porta_pp,
+      ss_total, ss_vr, opp, oss,
+      meta_ene_pp, meta_ene_ss, meta_feb_pp, meta_feb_ss
+
+    Reglas:
+    - Se recalculan pp_total y ss_total desde el desglose.
+    - Se fuerza dia = D-1 (día cerrado) para TODAS las filas.
+    - Se hace dedup por dni (última aparición).
+    """
+
+    # 1) Normalizar nombres de columnas (robusto: colapsa espacios)
+    df.columns = [" ".join(c.strip().lower().replace("\n", " ").split()) for c in df.columns]
+
+    # 2) Mapa flexible por si en algún momento vuelven a venir con espacios/variantes
     mapa = {
+        # DNI / nombre / fecha
         "dni": "dni",
         "documento": "dni",
         "nro dni": "dni",
         "número dni": "dni",
+        "numero dni": "dni",
 
         "nombre": "nombre",
         "nombres": "nombre",
@@ -37,65 +48,97 @@ def normaliza_df(df: pd.DataFrame) -> pd.DataFrame:
         "día": "dia",
         "fecha": "dia",
 
+        # Prepago
+        "pp_total": "pp_total",
         "pp total": "pp_total",
         "pptotal": "pp_total",
 
+        "pp_vr": "pp_vr",
         "pp vr": "pp_vr",
         "ppvr": "pp_vr",
         "vr pp": "pp_vr",
 
+        "porta_pp": "porta_pp",
         "porta pp": "porta_pp",
         "portapp": "porta_pp",
         "porta": "porta_pp",
 
+        # Postpago
+        "ss_total": "ss_total",
         "ss total": "ss_total",
         "sstotal": "ss_total",
 
+        "ss_vr": "ss_vr",
         "ss vr": "ss_vr",
         "ssvr": "ss_vr",
         "vr ss": "ss_vr",
 
         "opp": "opp",
         "oss": "oss",
+
+        # Metas
+        "meta_ene_pp": "meta_ene_pp",
+        "meta_ene_ss": "meta_ene_ss",
+        "meta_feb_pp": "meta_feb_pp",
+        "meta_feb_ss": "meta_feb_ss",
+        # por si vienen con espacios
+        "meta ene pp": "meta_ene_pp",
+        "meta ene ss": "meta_ene_ss",
+        "meta feb pp": "meta_feb_pp",
+        "meta feb ss": "meta_feb_ss",
     }
 
     df = df.rename(columns={c: mapa.get(c, c) for c in df.columns})
 
-    requeridos = ["dni", "nombre", "dia", "pp_vr", "porta_pp", "ss_vr", "opp", "oss"]
+    # 3) Validación de columnas mínimas
+    requeridos = [
+        "dni",
+        "nombre",
+        "dia",
+        "pp_vr",
+        "porta_pp",
+        "ss_vr",
+        "opp",
+        "oss",
+        "meta_ene_pp",
+        "meta_ene_ss",
+        "meta_feb_pp",
+        "meta_feb_ss",
+    ]
     faltantes = [c for c in requeridos if c not in df.columns]
     if faltantes:
         raise ValueError(f"Faltan columnas requeridas: {', '.join(faltantes)}")
 
-    # 2) DNI limpio
+    # 4) DNI limpio y válido
     df["dni"] = df["dni"].astype(str).str.strip()
-    df = df[df["dni"].str.match(r"^\d{6,12}$", na=False)]
+    df = df[df["dni"].str.match(r"^\d{6,12}$", na=False)].copy()
 
-    # 3) Nombre limpio
+    # 5) Nombre limpio
     df["nombre"] = df["nombre"].fillna("").astype(str).str.strip()
 
-    # 4) Parsear DIA (lo leemos, pero luego lo forzamos a D-1)
-    #    Igual lo parseamos por si quieres usarlo para validación/log.
+    # 6) Parsear DIA (se lee pero luego se fuerza D-1)
     df["dia"] = pd.to_datetime(df["dia"], errors="coerce").dt.date
 
-    # 5) Numéricos (todo int)
+    # 7) Numéricos (int) — si faltaran totales, igual se crean
     for c in ["pp_total", "pp_vr", "porta_pp", "ss_total", "ss_vr", "opp", "oss"]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(int)
         else:
-            # si no vienen totales, se crean
             df[c] = 0
 
-    # 6) Recalcular totales a partir del desglose (garantiza consistencia)
+    # 8) Metas a int
+    for c in ["meta_ene_pp", "meta_ene_ss", "meta_feb_pp", "meta_feb_ss"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(int)
+
+    # 9) Recalcular totales desde desglose (consistencia)
     df["pp_total"] = df["pp_vr"] + df["porta_pp"]
     df["ss_total"] = df["ss_vr"] + df["opp"] + df["oss"]
 
-    # 7) Forzar DIA = D-1 (día cerrado)
-    #    Esto evita que el CHECK de la BD reviente.
-    df["dia"] = pd.Timestamp.today().normalize().date()  # hoy 00:00
-    df["dia"] = pd.to_datetime(df["dia"]) - pd.Timedelta(days=1)
-    df["dia"] = df["dia"].dt.date
+    # 10) Forzar DIA = D-1 (día cerrado) para TODAS las filas
+    d1 = (pd.Timestamp.today().normalize() - pd.Timedelta(days=1)).date()
+    df["dia"] = d1
 
-    # 8) Dedup por DNI (última aparición del archivo)
+    # 11) Dedup por DNI (última aparición del archivo)
     df = df.drop_duplicates(subset=["dni"], keep="last").reset_index(drop=True)
 
     return df
@@ -107,11 +150,13 @@ def upsert_chunk(conn, chunk: pd.DataFrame) -> int:
             (dni, nombre, dia,
              pp_total, pp_vr, porta_pp,
              ss_total, ss_vr, opp, oss,
+             meta_ene_pp, meta_ene_ss, meta_feb_pp, meta_feb_ss,
              updated_at)
         VALUES
             (:dni, :nombre, :dia,
              :pp_total, :pp_vr, :porta_pp,
              :ss_total, :ss_vr, :opp, :oss,
+             :meta_ene_pp, :meta_ene_ss, :meta_feb_pp, :meta_feb_ss,
              now())
         ON CONFLICT (dni) DO UPDATE SET
             nombre = EXCLUDED.nombre,
@@ -123,6 +168,10 @@ def upsert_chunk(conn, chunk: pd.DataFrame) -> int:
             ss_vr = EXCLUDED.ss_vr,
             opp = EXCLUDED.opp,
             oss = EXCLUDED.oss,
+            meta_ene_pp = EXCLUDED.meta_ene_pp,
+            meta_ene_ss = EXCLUDED.meta_ene_ss,
+            meta_feb_pp = EXCLUDED.meta_feb_pp,
+            meta_feb_ss = EXCLUDED.meta_feb_ss,
             updated_at = now();
     """)
     conn.execute(sql, chunk.to_dict(orient="records"))

@@ -10,7 +10,9 @@ load_dotenv()
 DB_URL = os.getenv("DB_URL")
 
 if not DB_URL:
-    raise RuntimeError("DB_URL no está definido. Verifica tu archivo .env o las Variables en Railway.")
+    raise RuntimeError(
+        "DB_URL no está definido. Verifica tu archivo .env o las Variables en Railway."
+    )
 
 # Ajustar el driver para usar psycopg
 SQLA_URL = DB_URL.replace("postgresql://", "postgresql+psycopg://", 1)
@@ -45,11 +47,16 @@ def fetch_avance_by_dni(dni: str):
                     opp,
                     oss,
 
+                    meta_ene_pp,
+                    meta_ene_ss,
+                    meta_feb_pp,
+                    meta_feb_ss,
+
                     updated_at
-                FROM club_power_avance
+                FROM public.club_power_avance
                 WHERE dni = :dni
             """),
-            {"dni": dni}
+            {"dni": dni},
         ).mappings().first()
 
         if not row:
@@ -61,7 +68,8 @@ def fetch_avance_by_dni(dni: str):
         # Asegurar tipos (por seguridad)
         for k in [
             "pp_total", "pp_vr", "porta_pp",
-            "ss_total", "ss_vr", "opp", "oss"
+            "ss_total", "ss_vr", "opp", "oss",
+            "meta_ene_pp", "meta_ene_ss", "meta_feb_pp", "meta_feb_ss",
         ]:
             out[k] = int(out.get(k) or 0)
 
