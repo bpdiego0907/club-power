@@ -47,10 +47,10 @@ def fetch_avance_by_dni(dni: str):
                     opp,
                     oss,
 
-                    meta_ene_pp,
-                    meta_ene_ss,
-                    meta_feb_pp,
-                    meta_feb_ss,
+                    meta_mar_pp,
+                    meta_mar_ss,
+                    meta_abr_pp,
+                    meta_abr_ss,
 
                     updated_at
                 FROM public.club_power_avance
@@ -69,7 +69,7 @@ def fetch_avance_by_dni(dni: str):
         for k in [
             "pp_total", "pp_vr", "porta_pp",
             "ss_total", "ss_vr", "opp", "oss",
-            "meta_ene_pp", "meta_ene_ss", "meta_feb_pp", "meta_feb_ss",
+            "meta_mar_pp", "meta_mar_ss", "meta_abr_pp", "meta_abr_ss",
         ]:
             out[k] = int(out.get(k) or 0)
 

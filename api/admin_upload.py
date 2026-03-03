@@ -14,7 +14,7 @@ REQUIRED_COLS = [
     "dni","nombre","dia",
     "pp_total","pp_vr","porta_pp",
     "ss_total","ss_vr","opp","oss",
-    "meta_ene_pp","meta_ene_ss","meta_feb_pp","meta_feb_ss",
+    "meta_mar_pp","meta_mar_ss","meta_abr_pp","meta_abr_ss",
 ]
 
 def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -41,7 +41,7 @@ def _validate_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     # Números
     num_cols = [
         "pp_total","pp_vr","porta_pp","ss_total","ss_vr","opp","oss",
-        "meta_ene_pp","meta_ene_ss","meta_feb_pp","meta_feb_ss"
+        "meta_mar_pp","meta_mar_ss","meta_abr_pp","meta_abr_ss"
     ]
     for c in num_cols:
         df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(int)
@@ -65,13 +65,13 @@ def _upsert_df(conn, df: pd.DataFrame):
             (dni, nombre, dia,
              pp_total, pp_vr, porta_pp,
              ss_total, ss_vr, opp, oss,
-             meta_ene_pp, meta_ene_ss, meta_feb_pp, meta_feb_ss,
+             meta_mar_pp, meta_mar_ss, meta_abr_pp, meta_abr_ss,
              created_at, updated_at)
         VALUES
             (:dni, :nombre, :dia,
              :pp_total, :pp_vr, :porta_pp,
              :ss_total, :ss_vr, :opp, :oss,
-             :meta_ene_pp, :meta_ene_ss, :meta_feb_pp, :meta_feb_ss,
+             :meta_mar_pp, :meta_mar_ss, :meta_abr_pp, :meta_abr_ss,
              now(), now())
         ON CONFLICT (dni) DO UPDATE SET
             nombre = EXCLUDED.nombre,
@@ -83,10 +83,10 @@ def _upsert_df(conn, df: pd.DataFrame):
             ss_vr = EXCLUDED.ss_vr,
             opp = EXCLUDED.opp,
             oss = EXCLUDED.oss,
-            meta_ene_pp = EXCLUDED.meta_ene_pp,
-            meta_ene_ss = EXCLUDED.meta_ene_ss,
-            meta_feb_pp = EXCLUDED.meta_feb_pp,
-            meta_feb_ss = EXCLUDED.meta_feb_ss,
+            meta_mar_pp = EXCLUDED.meta_mar_pp,
+            meta_mar_ss = EXCLUDED.meta_mar_ss,
+            meta_abr_pp = EXCLUDED.meta_abr_pp,
+            meta_abr_ss = EXCLUDED.meta_abr_ss,
             updated_at = now();
     """)
     conn.execute(sql, df.to_dict(orient="records"))

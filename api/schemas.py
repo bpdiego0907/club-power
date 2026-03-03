@@ -25,10 +25,10 @@ class AvanceClubPowerResponse(BaseModel):
     # ======================
     # METAS (desde BD)
     # ======================
-    meta_ene_pp: int = Field(..., example=50)
-    meta_ene_ss: int = Field(..., example=2)
-    meta_feb_pp: int = Field(..., example=48)
-    meta_feb_ss: int = Field(..., example=1)
+    meta_mar_pp: int = Field(..., example=50)
+    meta_mar_ss: int = Field(..., example=2)
+    meta_abr_pp: int = Field(..., example=48)
+    meta_abr_ss: int = Field(..., example=1)
 
     # Auditoría
     updated_at: datetime = Field(..., example="2026-01-06T07:30:12")

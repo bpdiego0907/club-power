@@ -12,10 +12,10 @@ TABLE_NAME = "club_power_avance"
 def main():
     sql = text(f"""
         ALTER TABLE public.{TABLE_NAME}
-          ADD COLUMN IF NOT EXISTS meta_ene_pp INTEGER NOT NULL DEFAULT 0,
-          ADD COLUMN IF NOT EXISTS meta_ene_ss INTEGER NOT NULL DEFAULT 0,
-          ADD COLUMN IF NOT EXISTS meta_feb_pp INTEGER NOT NULL DEFAULT 0,
-          ADD COLUMN IF NOT EXISTS meta_feb_ss INTEGER NOT NULL DEFAULT 0;
+          ADD COLUMN IF NOT EXISTS meta_mar_pp INTEGER NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS meta_mar_ss INTEGER NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS meta_abr_pp INTEGER NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS meta_abr_ss INTEGER NOT NULL DEFAULT 0;
     """)
 
     with engine.begin() as conn:

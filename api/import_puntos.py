@@ -19,7 +19,7 @@ def normaliza_df(df: pd.DataFrame) -> pd.DataFrame:
       dni, nombre, dia,
       pp_total, pp_vr, porta_pp,
       ss_total, ss_vr, opp, oss,
-      meta_ene_pp, meta_ene_ss, meta_feb_pp, meta_feb_ss
+      meta_mar_pp, meta_mar_ss, meta_abr_pp, meta_abr_ss
 
     Reglas:
     - Se recalculan pp_total y ss_total desde el desglose.
@@ -77,15 +77,15 @@ def normaliza_df(df: pd.DataFrame) -> pd.DataFrame:
         "oss": "oss",
 
         # Metas
-        "meta_ene_pp": "meta_ene_pp",
-        "meta_ene_ss": "meta_ene_ss",
-        "meta_feb_pp": "meta_feb_pp",
-        "meta_feb_ss": "meta_feb_ss",
+        "meta_mar_pp": "meta_mar_pp",
+        "meta_mar_ss": "meta_mar_ss",
+        "meta_abr_pp": "meta_abr_pp",
+        "meta_abr_ss": "meta_abr_ss",
         # por si vienen con espacios
-        "meta ene pp": "meta_ene_pp",
-        "meta ene ss": "meta_ene_ss",
-        "meta feb pp": "meta_feb_pp",
-        "meta feb ss": "meta_feb_ss",
+        "meta ene pp": "meta_mar_pp",
+        "meta ene ss": "meta_mar_ss",
+        "meta feb pp": "meta_abr_pp",
+        "meta feb ss": "meta_abr_ss",
     }
 
     df = df.rename(columns={c: mapa.get(c, c) for c in df.columns})
@@ -100,10 +100,10 @@ def normaliza_df(df: pd.DataFrame) -> pd.DataFrame:
         "ss_vr",
         "opp",
         "oss",
-        "meta_ene_pp",
-        "meta_ene_ss",
-        "meta_feb_pp",
-        "meta_feb_ss",
+        "meta_mar_pp",
+        "meta_mar_ss",
+        "meta_abr_pp",
+        "meta_abr_ss",
     ]
     faltantes = [c for c in requeridos if c not in df.columns]
     if faltantes:
@@ -127,7 +127,7 @@ def normaliza_df(df: pd.DataFrame) -> pd.DataFrame:
             df[c] = 0
 
     # 8) Metas a int
-    for c in ["meta_ene_pp", "meta_ene_ss", "meta_feb_pp", "meta_feb_ss"]:
+    for c in ["meta_mar_pp", "meta_mar_ss", "meta_abr_pp", "meta_abr_ss"]:
         df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(int)
 
     # 9) Recalcular totales desde desglose (consistencia)
@@ -150,13 +150,13 @@ def upsert_chunk(conn, chunk: pd.DataFrame) -> int:
             (dni, nombre, dia,
              pp_total, pp_vr, porta_pp,
              ss_total, ss_vr, opp, oss,
-             meta_ene_pp, meta_ene_ss, meta_feb_pp, meta_feb_ss,
+             meta_mar_pp, meta_mar_ss, meta_abr_pp, meta_abr_ss,
              updated_at)
         VALUES
             (:dni, :nombre, :dia,
              :pp_total, :pp_vr, :porta_pp,
              :ss_total, :ss_vr, :opp, :oss,
-             :meta_ene_pp, :meta_ene_ss, :meta_feb_pp, :meta_feb_ss,
+             :meta_mar_pp, :meta_mar_ss, :meta_abr_pp, :meta_abr_ss,
              now())
         ON CONFLICT (dni) DO UPDATE SET
             nombre = EXCLUDED.nombre,
@@ -168,10 +168,10 @@ def upsert_chunk(conn, chunk: pd.DataFrame) -> int:
             ss_vr = EXCLUDED.ss_vr,
             opp = EXCLUDED.opp,
             oss = EXCLUDED.oss,
-            meta_ene_pp = EXCLUDED.meta_ene_pp,
-            meta_ene_ss = EXCLUDED.meta_ene_ss,
-            meta_feb_pp = EXCLUDED.meta_feb_pp,
-            meta_feb_ss = EXCLUDED.meta_feb_ss,
+            meta_mar_pp = EXCLUDED.meta_mar_pp,
+            meta_mar_ss = EXCLUDED.meta_mar_ss,
+            meta_abr_pp = EXCLUDED.meta_abr_pp,
+            meta_abr_ss = EXCLUDED.meta_abr_ss,
             updated_at = now();
     """)
     conn.execute(sql, chunk.to_dict(orient="records"))
